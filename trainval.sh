@@ -10,3 +10,4 @@ python main_dnd.py \
  --acc_bsz 4 \
  --codalab_pred test \
  --train_set trainval \
+ --restore_from (REPLACE THIS WITH results/ajsdijasd.pth)

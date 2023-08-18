@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 import sys
-sys.path.append('\\Users\\alant\\Documents\\POLYGENCE_PROJECT\\DND-Diko-WWWR-Repo\\DND-Diko-WWWR')
-# print(sys.path)
+sys.path.append('..\\')
 import os
-# print(os.getcwd())
 import os.path
 import yaml
 
@@ -14,7 +12,6 @@ split = 'test'
 
 submit_dir = os.path.join(input_dir, 'res'+'_'+split)
 truth_dir = os.path.join(input_dir, 'ref'+'_'+split)
-
 
 if not os.path.isdir(submit_dir):
     print("%s doesn't exist" % submit_dir)
@@ -39,7 +36,7 @@ if os.path.isdir(submit_dir) and os.path.isdir(truth_dir):
     sorted_truth1 = [item.split(' ')[1].strip() for item in sorted(labels_wr2021)]
     sorted_pred1 = [item.split(' ')[1].strip() for item in sorted(pred_wr2021)]
     accuracy1 = float(sum(1 for x,y in zip(sorted_truth1, sorted_pred1) if x == y)) / len(sorted_truth1)
-
+    
     res = {
             'accuracy_mean': round((accuracy0+accuracy1)/2*100, 1), 
             'accuracy_ww2020': round(accuracy0*100, 1),
@@ -49,6 +46,6 @@ if os.path.isdir(submit_dir) and os.path.isdir(truth_dir):
 
     with open(output_path, 'w') as output_file:
         yaml.dump(res, output_file, default_flow_style=False)
-
+        
     print(res)
 

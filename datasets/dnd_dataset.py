@@ -18,12 +18,52 @@ class DND(Dataset):
     def __init__(self, cfg, split='train'):
         super(DND, self).__init__()
 
+        self.img_paths = []
+        self.label_names = []
+
         if split not in ('trainval', 'train', 'val', 'test'):
             raise ValueError("split must be in trainval, train, val, or test. Supplied {}".format(split))
         self.split = split
         self.cfg = cfg
+        # print(os.path.exists('train_images.pkl'))
+        # current_directory = os.getcwd()
+        # print("Current working directory:", current_directory)
+        # print(split)
 
-        self.img_paths, self.label_names, self.class_to_ind = get_metadata(data_root, cfg.CROPTYPE, split, verbose=True)
+        if (split == "train" or split == "val"):
+            metadata_split = "trainval"
+        else:
+            metadata_split = "test"
+        temp_imgs, temp_labels, self.class_to_ind = get_metadata(data_root, cfg.CROPTYPE, metadata_split, verbose=True)
+        if split == 'test':
+            self.img_paths = temp_imgs
+            self.label_names = temp_labels
+        
+        if split == 'train':
+            try:
+                with open('train_images.pkl', 'rb') as f:
+                    self.img_paths = pkl.load(f)
+                with open('train_labels.pkl', 'rb') as f:
+                    self.label_names = pkl.load(f)
+                print(f"Loaded {len(self.img_paths)} training images and {len(self.label_names)} labels.")
+            except FileNotFoundError:
+                print("Error: train_images.pkl or train_labels.pkl not found.")
+                exit(1)
+        elif split == 'val':
+            try:
+                with open('val_images.pkl', 'rb') as f:
+                    self.img_paths = pkl.load(f)
+                with open('val_labels.pkl', 'rb') as f:
+                    self.label_names = pkl.load(f)
+                print(f"Loaded {len(self.img_paths)} validation images and {len(self.label_names)} labels.")
+            except FileNotFoundError:
+                print("Error: val_images.pkl or val_labels.pkl not found.")
+                exit(1)
+
+        # print("PRINTING IMAGE PATHS AND LABEL NAMES")
+        # print(self.img_paths)
+        # print(self.label_names)
+
         self.label_idxs = [self.class_to_ind[i] for i in self.label_names] if self.label_names else None
 
         # use cache for acceleration
@@ -48,6 +88,8 @@ class DND(Dataset):
         self.tform_pipeline = Compose(tform)
 
     def __getitem__(self, index):
+        # if self.split == 'train' or self.split == 'val':
+        #     img_name = self.img_paths[index].split('/')[-1]
         img_name = self.img_paths[index].split('/')[-1]
         assert os.path.isfile(self.img_paths[index]), self.img_paths[index] + " does not exit!"
 

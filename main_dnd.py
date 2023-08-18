@@ -140,19 +140,19 @@ def train_model(model, train_loader, val_loader, test_loader, start_epoch, cfg):
             scheduler.step()
             print("Current lr: ", scheduler.get_last_lr())
 
-        if any([pg['lr'] <= cfg.TRAIN.LR * cfg.NGPUS * cfg.bsz / 999.0 for pg in optimizer.param_groups]):
-            print("=================Testing=================")
+        # if any([pg['lr'] <= cfg.TRAIN.LR * cfg.NGPUS * cfg.bsz / 999.0 for pg in optimizer.param_groups]):
+        #     print("=================Testing=================")
 
-            # inference
-            if best_path:
-                model.cpu()
-                cfg.restore_from = best_path
-                model, _ = load_model(cfg, model)
-                model.to(device)
-            _ = val_epoch(model, test_loader if cfg.codalab_pred == 'test' else val_loader, cfg, is_final=True)
+        #     # inference
+        #     if best_path:
+        #         model.cpu()
+        #         cfg.restore_from = best_path
+        #         model, _ = load_model(cfg, model)
+        #         model.to(device)
+        #     _ = val_epoch(model, test_loader if cfg.codalab_pred == 'test' else val_loader, cfg, is_final=True)
             
-            print("Exiting training early", flush=True)
-            break
+        #     print("Exiting training early", flush=True)
+        #     break
 
 if __name__ == '__main__':
     # init
@@ -168,11 +168,11 @@ if __name__ == '__main__':
 
     # dataset & dataloader
     if not args.is_test:
-        train_dataset = DND(cfg, split=cfg.train_set)
+        train_dataset = DND(cfg, split="train")
         train_loader = DataLoader(train_dataset, batch_size=cfg.bsz, shuffle=True, num_workers=cfg.NWORK, drop_last=False)
-        # val_dataset = DND(cfg, split='val') 
-        # val_loader = DataLoader(val_dataset, batch_size=1, num_workers=cfg.NWORK, drop_last=False)
-        val_loader = None
+        val_dataset = DND(cfg, split='val') 
+        val_loader = DataLoader(val_dataset, batch_size=1, num_workers=cfg.NWORK, drop_last=False)
+        # val_loader = None
     test_dataset = DND(cfg, split='test')
     test_loader = DataLoader(test_dataset, batch_size=1, num_workers=cfg.NWORK, drop_last=False)
 

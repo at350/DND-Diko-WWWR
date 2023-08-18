@@ -164,6 +164,7 @@ def load_model(cfg, model):
     start_epoch = -1
     
     if len(cfg.restore_from) != 0:
+        # print(os.path.exists(cfg.restore_from))
         ckpt = torch.load(cfg.restore_from)
         start_epoch = ckpt['epoch']
         # optimizer.load_state_dict(ckpt['optimizer'])      # if available
