@@ -1,80 +1,56 @@
-# from sklearn.metrics import confusion_matrix
-# import numpy as np
-# import os
-
-# # Paths as mentioned in evaluate.py script
-# input_dir = 'codalab'
-# split = 'test'
-# submit_dir = os.path.join(input_dir, 'res'+'_'+split)
-# truth_dir = os.path.join(input_dir, 'ref'+'_'+split)
-
-# labels_ww2020_path = os.path.join(truth_dir, "labels_WW2020.txt")
-# labels_wr2021_path = os.path.join(truth_dir, "labels_WR2021.txt")
-# pred_ww2020_path = os.path.join(submit_dir, "predictions_WW2020.txt")
-# pred_wr2021_path = os.path.join(submit_dir, "predictions_WR2021.txt")
-
-# # Extracting true labels and predictions
-# sorted_truth0 = [item.split(' ')[1].strip() for item in sorted(open(labels_ww2020_path).readlines())]
-# sorted_pred0 = [item.split(' ')[1].strip() for item in sorted(open(pred_ww2020_path).readlines())]
-# sorted_truth1 = [item.split(' ')[1].strip() for item in sorted(open(labels_wr2021_path).readlines())]
-# sorted_pred1 = [item.split(' ')[1].strip() for item in sorted(open(pred_wr2021_path).readlines())]
-
-# # Computing the confusion matrices
-# conf_matrix_ww2020 = confusion_matrix(sorted_truth0, sorted_pred0, labels=np.unique(sorted_truth0))
-# conf_matrix_wr2021 = confusion_matrix(sorted_truth1, sorted_pred1, labels=np.unique(sorted_truth1))
-
-# print("Confusion Matrix for WW2020:")
-# print(conf_matrix_ww2020)
-# print("\nConfusion Matrix for WR2021:")
-# print(conf_matrix_wr2021)
-
-
-"""
-Script to generate predictions for the validation set.
-Based on main_dnd.py and dnd_dataset.py.
-"""
-
 from pprint import pprint
 import torch
 from torch.utils.data import DataLoader
-import torch.nn.functional as F
-
-from configs.config import cfg_from_file, project_root, get_arguments
 from datasets.dnd_dataset import DND
 from models.my_model import MyModel
-from utils.pytorch_misc import * 
-import yaml
+from utils.pytorch_misc import load_model
+from configs.config import cfg_from_file, project_root, get_arguments
 
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+def predict_val(cfg):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def predict_val():
-    # Load configuration
-    args = get_arguments()
-    cfg_from_file(args.cfg)
-    cfg.codalab_pred = 'val'  # Ensure we're targeting the validation set
-
-    # Create validation dataset and loader
+    # Initialize validation dataset and loader
     val_dataset = DND(cfg, split='val')
     val_loader = DataLoader(val_dataset, batch_size=1, num_workers=cfg.NWORK, drop_last=False)
 
-    # Load the model
-    model = MyModel(cfg).to(device)
-    model = torch.nn.DataParallel(model)
+    cfg.num_classes = len(val_dataset.class_to_ind)
 
-    # Restore model weights from the checkpoint
-    checkpoint = torch.load(args.restore_from)
-    model.load_state_dict(checkpoint['model_state_dict'])
+    # Load model
+    # model = MyModel(cfg)
+    # model, _ = load_model(cfg, model)
+    # model.to(device)
+    # model.eval()
 
-    # Evaluate on the validation set
+    model = MyModel(cfg)
+    model_path = cfg.restore_from
+    print(f"Loading model from {model_path}")
+    checkpoint = torch.load(model_path, map_location=device)
     model.eval()
+
+    model_weights = checkpoint
+    model.load_state_dict(model_weights, strict=False)
+
+    model.to(device)
+
+    val_predictions = []
+
+    # Loop through validation data and predict
     with torch.no_grad():
         for batch in val_loader:
-            img = batch['img'].to(device)
-            labels = batch['label_idxs'].to(device)
-            scores = model(img)
-            # TODO: Store the predictions as needed
+            images = batch['img'].to(device)
+            scores = model(images)
+            _, predicted = scores.max(1)
+            val_predictions.extend(predicted.tolist())
+    
+    # Save predictions to a file
+    with open('val_predictions.txt', 'w') as f:
+        for i, pred in enumerate(val_predictions):
+            f.write(f"{val_dataset.img_paths[i]} {pred}\n")
 
-    print("Validation predictions generated!")
+    print(f"Predictions for validation data saved to val_predictions.txt.")
 
 if __name__ == '__main__':
-    predict_val()
+    args = get_arguments()  # Get command line arguments
+    cfg = cfg_from_file(args.cfg)  # Load the configuration from the provided file
+    cfg.update(vars(args))  # Update the configuration with command line arguments
+    predict_val(cfg)  # Pass the configuration to the predict_val function
