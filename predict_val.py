@@ -16,23 +16,24 @@ def predict_val(cfg):
     cfg.num_classes = len(val_dataset.class_to_ind)
 
     # Load model
-    # model = MyModel(cfg)
-    # model, _ = load_model(cfg, model)
+    model = MyModel(cfg)
+    model, _ = load_model(cfg, model)
     # model.to(device)
     # model.eval()
 
-    model = MyModel(cfg)
-    model_path = cfg.restore_from
-    print(f"Loading model from {model_path}")
-    checkpoint = torch.load(model_path, map_location=device)
-    model.eval()
+    # model = MyModel(cfg)
+    # model_path = cfg.restore_from
+    # print(f"Loading model from {model_path}")
+    # checkpoint = torch.load(model_path, map_location=device)
+    
 
-    model_weights = checkpoint
-    model.load_state_dict(model_weights, strict=False)
+    # model_weights = checkpoint["state_dict"]
+    # model.load_state_dict(model_weights)
 
     model.to(device)
 
     val_predictions = []
+    model.eval()
 
     # Loop through validation data and predict
     with torch.no_grad():
