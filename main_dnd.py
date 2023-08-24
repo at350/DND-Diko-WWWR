@@ -168,11 +168,12 @@ if __name__ == '__main__':
 
     # dataset & dataloader
     if not args.is_test:
-        train_dataset = DND(cfg, split="train")
+        #train_dataset = DND(cfg, split="train")
+        train_dataset = DND(cfg, split=cfg.train_set)
         train_loader = DataLoader(train_dataset, batch_size=cfg.bsz, shuffle=True, num_workers=cfg.NWORK, drop_last=False)
-        val_dataset = DND(cfg, split='val') 
-        val_loader = DataLoader(val_dataset, batch_size=1, num_workers=cfg.NWORK, drop_last=False)
-        # val_loader = None
+        # val_dataset = DND(cfg, split='val') 
+        # val_loader = DataLoader(val_dataset, batch_size=1, num_workers=cfg.NWORK, drop_last=False)
+        val_loader = None
     test_dataset = DND(cfg, split='test')
     test_loader = DataLoader(test_dataset, batch_size=1, num_workers=cfg.NWORK, drop_last=False)
 

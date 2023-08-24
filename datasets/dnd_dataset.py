@@ -9,61 +9,67 @@ from PIL import Image
 import os
 import pickle as pkl
 from torch.utils.data import Dataset
-from torchvision.transforms import Compose, ToTensor, Normalize, RandomRotation, RandomVerticalFlip, RandomHorizontalFlip, RandomPerspective
+from torchvision.transforms import Compose, ToTensor, Normalize, RandomRotation, RandomVerticalFlip, RandomHorizontalFlip, RandomPerspective, ColorJitter, RandomAdjustSharpness, RandomCrop
 from configs.config import project_root, data_root
 from datasets.get_metadata import get_metadata
+import random
+from torchvision.transforms import functional as F
 
 # Deep Nutrient Deficiency dataset
 class DND(Dataset):
     def __init__(self, cfg, split='train'):
-        super(DND, self).__init__()
+        # This is for the TRAINVAL SPLIT
+        # super(DND, self).__init__()
 
-        self.img_paths = []
-        self.label_names = []
+        # self.img_paths = []
+        # self.label_names = []
+
+        # if split not in ('trainval', 'train', 'val', 'test'):
+        #     raise ValueError("split must be in trainval, train, val, or test. Supplied {}".format(split))
+        # self.split = split
+        # self.cfg = cfg
+
+        # if (split == "train" or split == "val"):
+        #     metadata_split = "trainval"
+        # else:
+        #     metadata_split = "test"
+        # temp_imgs, temp_labels, self.class_to_ind = get_metadata(data_root, cfg.CROPTYPE, metadata_split, verbose=True)
+        # if split == 'test':
+        #     self.img_paths = temp_imgs
+        #     self.label_names = temp_labels
+        
+        # if split == 'train':
+        #     try:
+        #         with open('train_images.pkl', 'rb') as f:
+        #             self.img_paths = pkl.load(f)
+        #         with open('train_labels.pkl', 'rb') as f:
+        #             self.label_names = pkl.load(f)
+        #         print(f"Loaded {len(self.img_paths)} training images and {len(self.label_names)} labels.")
+        #     except FileNotFoundError:
+        #         print("Error: train_images.pkl or train_labels.pkl not found.")
+        #         exit(1)
+        # elif split == 'val':
+        #     try:
+        #         with open('val_images.pkl', 'rb') as f:
+        #             self.img_paths = pkl.load(f)
+        #         with open('val_labels.pkl', 'rb') as f:
+        #             self.label_names = pkl.load(f)
+        #         print(f"Loaded {len(self.img_paths)} validation images and {len(self.label_names)} labels.")
+        #     except FileNotFoundError:
+        #         print("Error: val_images.pkl or val_labels.pkl not found.")
+        #         exit(1)
+
+        # self.label_idxs = [self.class_to_ind[i] for i in self.label_names] if self.label_names else None
+
+        # THIS IS FOR NO SPLIT
+        super(DND, self).__init__()
 
         if split not in ('trainval', 'train', 'val', 'test'):
             raise ValueError("split must be in trainval, train, val, or test. Supplied {}".format(split))
         self.split = split
         self.cfg = cfg
-        # print(os.path.exists('train_images.pkl'))
-        # current_directory = os.getcwd()
-        # print("Current working directory:", current_directory)
-        # print(split)
 
-        if (split == "train" or split == "val"):
-            metadata_split = "trainval"
-        else:
-            metadata_split = "test"
-        temp_imgs, temp_labels, self.class_to_ind = get_metadata(data_root, cfg.CROPTYPE, metadata_split, verbose=True)
-        if split == 'test':
-            self.img_paths = temp_imgs
-            self.label_names = temp_labels
-        
-        if split == 'train':
-            try:
-                with open('train_images.pkl', 'rb') as f:
-                    self.img_paths = pkl.load(f)
-                with open('train_labels.pkl', 'rb') as f:
-                    self.label_names = pkl.load(f)
-                print(f"Loaded {len(self.img_paths)} training images and {len(self.label_names)} labels.")
-            except FileNotFoundError:
-                print("Error: train_images.pkl or train_labels.pkl not found.")
-                exit(1)
-        elif split == 'val':
-            try:
-                with open('val_images.pkl', 'rb') as f:
-                    self.img_paths = pkl.load(f)
-                with open('val_labels.pkl', 'rb') as f:
-                    self.label_names = pkl.load(f)
-                print(f"Loaded {len(self.img_paths)} validation images and {len(self.label_names)} labels.")
-            except FileNotFoundError:
-                print("Error: val_images.pkl or val_labels.pkl not found.")
-                exit(1)
-
-        # print("PRINTING IMAGE PATHS AND LABEL NAMES")
-        # print(self.img_paths)
-        # print(self.label_names)
-
+        self.img_paths, self.label_names, self.class_to_ind = get_metadata(data_root, cfg.CROPTYPE, split, verbose=True)
         self.label_idxs = [self.class_to_ind[i] for i in self.label_names] if self.label_names else None
 
         # use cache for acceleration
@@ -75,9 +81,13 @@ class DND(Dataset):
         # data augmentation
         if split.startswith('train'):
             tform = [
-                # RandomRotation(180),
                 RandomHorizontalFlip(),
-                # RandomPerspective(), 
+                RandomVerticalFlip(),
+                RandomRotation90(),
+                RandomCrop(size=(800,800)),
+                ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2),
+                RandomAdjustSharpness(sharpness_factor=2),
+                RandomPerspective(distortion_scale=0.1, p=0.5, interpolation=3),
                 ToTensor(),
                 Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),]
         else: 
@@ -135,3 +145,11 @@ def assertion_checks(entry):
     c, h, w = entry['img'].size()
     if c != 3:
         raise ValueError("Must have 3 color channels")
+
+class RandomRotation90:
+    def __init__(self, degrees=[0, 90, 180, 270]):
+        self.degrees = degrees
+
+    def __call__(self, img):
+        angle = random.choice(self.degrees)
+        return F.rotate(img, angle)

@@ -17,6 +17,7 @@ def predict_val(cfg):
 
     # Load model
     model = MyModel(cfg)
+    model = torch.nn.DataParallel(model)
     model, _ = load_model(cfg, model)
     # model.to(device)
     # model.eval()
